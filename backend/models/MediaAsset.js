@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { localizedText, modelFor } from './shared.js';
+export default modelFor('MediaAsset',new mongoose.Schema({fileName:{type:String,required:true},path:{type:String,required:true},mimeType:{type:String,required:true},size:Number,altText:localizedText,caption:localizedText,category:{type:String,enum:['image','video','document','audio'],default:'image'},uploadedBy:{type:mongoose.Schema.Types.ObjectId,ref:'User'}},{timestamps:true}));

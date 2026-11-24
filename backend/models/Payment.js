@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { modelFor } from './shared.js';
+export default modelFor('Payment',new mongoose.Schema({serviceRequest:{type:mongoose.Schema.Types.ObjectId,ref:'ServiceRequest'},amount:{type:Number,required:true,min:0},currency:{type:String,default:'ETB'},provider:{type:String,enum:['telebirr','cbe_birr','chapa'],required:true},providerReference:{type:String,unique:true,sparse:true},status:{type:String,enum:['pending','paid','failed','refunded'],default:'pending'},paidAt:Date},{timestamps:true}));

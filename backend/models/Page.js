@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { localizedRequired, localizedText, modelFor } from './shared.js';
+export default modelFor('Page',new mongoose.Schema({slug:{type:String,required:true,unique:true,trim:true},title:localizedRequired,summary:localizedText,content:localizedText,status:{type:String,enum:['draft','review','published'],default:'draft'},seo:{title:String,description:String,keywords:[String]},author:{type:mongoose.Schema.Types.ObjectId,ref:'User'},publishedAt:Date},{timestamps:true}));

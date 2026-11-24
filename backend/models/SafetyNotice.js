@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { localizedRequired, localizedText, modelFor } from './shared.js';
+export default modelFor('SafetyNotice',new mongoose.Schema({type:{type:String,enum:['crime_prevention','missing_person','most_wanted','traffic','weather','advisory'],required:true},title:localizedRequired,description:localizedText,image:String,isActive:{type:Boolean,default:true},publishedAt:Date,expiresAt:Date},{timestamps:true}));

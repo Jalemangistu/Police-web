@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { localizedRequired, localizedText, modelFor } from './shared.js';
+export default modelFor('Station',new mongoose.Schema({name:localizedRequired,subCity:{type:String,required:true},district:String,address:localizedText,phone:[String],email:String,operatingHours:localizedText,location:{type:{type:String,enum:['Point'],default:'Point'},coordinates:{type:[Number],default:undefined}},isActive:{type:Boolean,default:true}},{timestamps:true}));

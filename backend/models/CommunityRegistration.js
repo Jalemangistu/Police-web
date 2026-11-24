@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { modelFor } from './shared.js';
+export default modelFor('CommunityRegistration',new mongoose.Schema({program:{type:String,enum:['neighborhood_watch','volunteer','youth_engagement','partnership'],required:true},fullName:{type:String,required:true},phone:{type:String,required:true},email:String,subCity:String,message:String,status:{type:String,enum:['new','contacted','approved','closed'],default:'new'}},{timestamps:true}));

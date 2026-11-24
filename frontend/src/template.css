@@ -1,0 +1,96 @@
+/* Clean template variant: layout retained, no photographic or simulated image background. */
+body .hero {
+    background: #071d3c !important
+}
+
+body .hero:after {
+    display: none !important
+}
+
+body .heroIn {
+    background: linear-gradient(105deg, rgba(10, 43, 90, .42), transparent 70%) !important
+}
+
+
+
+/* Slider content follows the reference's label → headline → supporting copy → search order. */
+body .hero .tag {
+    font-size: 0 !important;
+    letter-spacing: 0 !important;
+    margin-bottom: 42px !important
+}
+
+body .hero .tag:after {
+    content: 'ADDIS ABABA POLICE';
+    font-size: 16px;
+    letter-spacing: 7px;
+    color: #dfb82c;
+    font-weight: 700
+}
+
+body .hero h1 {
+    max-width: 760px !important;
+    margin-bottom: 34px !important
+}
+
+body .hero p {
+    margin-bottom: 0 !important
+}
+
+body .hero .actions {
+    margin-top: 56px !important;
+    display: flex !important;
+    max-width: 670px !important;
+    padding: 8px 9px 8px 29px !important;
+    border: 1px solid #76899f !important;
+    border-radius: 44px !important;
+    background: rgba(255, 255, 255, .10) !important;
+    align-items: center !important
+}
+
+body .hero .actions .button {
+    margin: 0 0 0 auto !important;
+    border-radius: 34px !important;
+    padding: 18px 36px !important;
+    font-size: 0 !important
+}
+
+body .hero .actions .button:after {
+    content: 'Search';
+    font-size: 16px
+}
+
+body .hero .actions .outline {
+    display: none !important
+}
+
+body .hero .actions:before {
+    content: 'Search the website...';
+    color: #b6c2d1;
+    font-size: 19px
+}
+
+@media(max-width:650px) {
+    body .hero .tag {
+        margin-bottom: 28px !important
+    }
+
+    body .hero .tag:after {
+        font-size: 12px;
+        letter-spacing: 4px
+    }
+
+    body .hero .actions {
+        margin-top: 38px !important;
+        padding-left: 18px !important
+    }
+
+    body .hero .actions:before {
+        font-size: 14px
+    }
+
+    body .hero .actions .button {
+        padding: 14px 18px !important;
+        font-size: 12px
+    }
+}

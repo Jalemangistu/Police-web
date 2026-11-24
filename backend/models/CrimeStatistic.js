@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { modelFor } from './shared.js';
+export default modelFor('CrimeStatistic',new mongoose.Schema({period:{type:String,required:true},periodType:{type:String,enum:['monthly','quarterly','annual'],required:true},category:{type:String,required:true},reportedCount:{type:Number,min:0,default:0},resolvedCount:{type:Number,min:0,default:0},subCity:String,isPublished:{type:Boolean,default:false}},{timestamps:true}));

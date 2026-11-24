@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { localizedRequired, localizedText, modelFor } from './shared.js';
+export default modelFor('Bid',new mongoose.Schema({referenceNumber:{type:String,required:true,unique:true},title:localizedRequired,description:localizedText,openingDate:Date,closingDate:Date,status:{type:String,enum:['draft','open','closed','awarded'],default:'draft'},documents:[String],publishedAt:Date},{timestamps:true}));

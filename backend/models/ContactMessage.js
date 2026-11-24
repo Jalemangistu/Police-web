@@ -1,0 +1,2 @@
+import mongoose from 'mongoose'; import { modelFor } from './shared.js';
+export default modelFor('ContactMessage',new mongoose.Schema({fullName:{type:String,required:true},email:{type:String,required:true},phone:String,subject:String,message:{type:String,required:true},department:String,status:{type:String,enum:['new','assigned','resolved','closed'],default:'new'},assignedTo:{type:mongoose.Schema.Types.ObjectId,ref:'User'}},{timestamps:true}));
