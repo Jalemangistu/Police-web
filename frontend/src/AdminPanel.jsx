@@ -1778,16 +1778,42 @@ function Users({ currentUser }) {
                             </span>
                           </td>
                           <td data-label="Action" style={{ textAlign: 'right' }}>
-                            <button
-                              type="button"
-                              className="urm-action-btn"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openEditUser(u);
-                              }}
-                            >
-                              Edit
-                            </button>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+                              <button
+                                type="button"
+                                className="urm-action-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditUser(u);
+                                }}
+                              >
+                                Edit
+                              </button>
+                              {!isSelf && u.role !== 'super_admin' ? (
+                                <button
+                                  type="button"
+                                  className="urm-danger-link"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    confirmDeleteUser(u);
+                                  }}
+                                  title="Delete user"
+                                >
+                                  Delete
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="urm-danger-link"
+                                  disabled
+                                  style={{ opacity: 0.35, cursor: 'not-allowed' }}
+                                  title={isSelf ? 'You cannot delete your own account' : 'Super Administrator accounts cannot be deleted'}
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  Delete
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );

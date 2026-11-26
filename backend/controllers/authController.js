@@ -5,7 +5,7 @@ import Permission from '../models/Permission.js';
 import AuditLog from '../models/AuditLog.js';
 import { tokenFor, clean } from '../utils/authUtils.js';
 import { validatePassword } from '../utils/passwordPolicy.js';
-import { sendPasswordResetEmail } from '../utils/emailService.js';
+import { sendPasswordResetEmail, sendResetSuccessEmail } from '../utils/emailService.js';
 import { ROLE_DEFINITIONS } from '../config/roles.js';
 
 export const resolveRolePermissions = async (roleKey) => {
@@ -189,6 +189,13 @@ export const resetPassword = async (req, res) => {
     resourceType: 'auth',
     ipAddress: req.ip
   });
+
+  // Send confirmation email
+  try {
+    await sendResetSuccessEmail(user.email, user.name);
+  } catch (emailErr) {
+    console.error('Error sending reset success email:', emailErr.message);
+  }
 
   res.json({
     message: 'Your password has been reset successfully. Please log in with your new credentials.'

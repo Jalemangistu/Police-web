@@ -1,91 +1,210 @@
 import nodemailer from 'nodemailer';
+import dotenv from 'dotenv';
+import {
+  VERIFICATION_EMAIL_TEMPLATE,
+  WELCOME_EMAIL_TEMPLATE,
+  PASSWORD_RESET_REQUEST_TEMPLATE,
+  PASSWORD_RESET_SUCCESS_TEMPLATE,
+  ACCOUNT_SETUP_TEMPLATE
+} from '../utils/emailTemplates.js';
 
-/**
- * Sends a password reset email to the user.
- * Falls back to logging the secure reset URL to the terminal in development
- * if SMTP is not configured.
- */
-export const sendPasswordResetEmail = async ({ toEmail, userName, resetUrl, expiresInMinutes = 30 }) => {
-  const hasSmtpConfig = process.env.SMTP_HOST && process.env.SMTP_USER;
+dotenv.config();
 
-  const htmlContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc; margin: 0; padding: 24px; color: #0f172a; }
-        .card { max-width: 580px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05); }
-        .header { background-color: #0c1c34; padding: 28px 24px; text-align: center; color: #ffffff; }
-        .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.05em; color: #ffffff; }
-        .header p { margin: 6px 0 0; color: #d9b048; font-size: 13px; text-transform: uppercase; letter-spacing: 0.1em; }
-        .body { padding: 32px 28px; line-height: 1.6; }
-        .btn-wrapper { text-align: center; margin: 32px 0; }
-        .btn { display: inline-block; background-color: #0c1c34; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 8px; font-weight: 600; font-size: 15px; border: 2px solid #d9b048; }
-        .btn:hover { background-color: #16295a; }
-        .footer { padding: 20px 28px; background-color: #f1f5f9; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; line-height: 1.5; }
-        .warning { background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 12px 16px; margin: 20px 0; border-radius: 4px; font-size: 13px; color: #991b1b; }
-      </style>
-    </head>
-    <body>
-      <div class="card">
-        <div class="header">
-          <h1>Addis Ababa Police Commission</h1>
-          <p>Official Portal Security</p>
-        </div>
-        <div class="body">
-          <p>Hello <strong>${userName || 'Officer'}</strong>,</p>
-          <p>We received a request to reset the password for your portal account (<code>${toEmail}</code>).</p>
-          <p>Click the button below to choose a new password. This secure link is valid for <strong>${expiresInMinutes} minutes</strong>.</p>
-          
-          <div class="btn-wrapper">
-            <a href="${resetUrl}" class="btn" target="_blank">Reset Password</a>
-          </div>
-
-          <p style="font-size: 13px; color: #64748b;">Or copy and paste this URL directly into your browser:<br>
-            <a href="${resetUrl}" style="color: #0284c7; word-break: break-all;">${resetUrl}</a>
-          </p>
-
-          <div class="warning">
-            <strong>Security Notice:</strong> If you did not request this password reset, please disregard this email or report it to platform security immediately. Your current password remains secure until you confirm a new one.
-          </div>
-        </div>
-        <div class="footer">
-          This is an automated operational notification from Addis Ababa Police Commission Portal. Please do not reply directly to this email.
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-
-  if (hasSmtpConfig) {
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT || '587', 10),
-      secure: process.env.SMTP_SECURE === 'true',
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS
-      }
-    });
-
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || `"Addis Ababa Police Portal" <${process.env.SMTP_USER}>`,
-      to: toEmail,
-      subject: 'Password Reset Request - Addis Ababa Police Portal',
-      html: htmlContent
-    });
-
-    return { sent: true, mode: 'smtp' };
-  } else {
-    // Development fallback
-    console.log('\n============================================================');
-    console.log('🔑 [DEV EMAIL SERVICE] PASSWORD RESET LINK GENERATED:');
-    console.log(`To: ${toEmail}`);
-    console.log(`Reset URL: ${resetUrl}`);
-    console.log(`Expires in: ${expiresInMinutes} minutes`);
-    console.log('============================================================\n');
-    return { sent: true, mode: 'development-log', resetUrl };
-  }
+export const DEFAULT_EMAIL_CONFIG = {
+  host: process.env.SMTP_HOST || process.env.EMAIL_SMTP_HOST || 'smtp.gmail.com',
+  port: parseInt(process.env.SMTP_PORT || process.env.EMAIL_SMTP_PORT || '587', 10),
+  secure: (process.env.SMTP_SECURE || process.env.EMAIL_SMTP_SECURE) === 'true',
+  user: process.env.SMTP_USER || process.env.EMAIL_USER || '',
+  pass: process.env.SMTP_PASS || process.env.EMAIL_PASS || '',
+  fromName: process.env.EMAIL_FROM_NAME || 'Addis Ababa Police Commission',
+  fromEmail: process.env.SMTP_FROM || process.env.EMAIL_USER || 'no-reply@police.gov.et',
+  replyTo: process.env.EMAIL_REPLY_TO || '',
 };
 
+let cachedTransporter = null;
+let lastConfigVersion = null;
+
+/**
+ * Build Nodemailer transporter from config or environment variables
+ */
+export const createTransporter = (config = DEFAULT_EMAIL_CONFIG) => {
+  const cfg = { ...DEFAULT_EMAIL_CONFIG, ...config };
+
+  // If using Gmail service directly
+  if (cfg.host && (cfg.host.toLowerCase().includes('gmail') || cfg.service?.toLowerCase() === 'gmail')) {
+    return nodemailer.createTransport({
+      service: 'Gmail',
+      auth: {
+        user: cfg.user,
+        pass: cfg.pass,
+      },
+    });
+  }
+
+  // Custom SMTP server configuration
+  return nodemailer.createTransport({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure || cfg.port === 465,
+    auth: {
+      user: cfg.user,
+      pass: cfg.pass,
+    },
+    tls: {
+      rejectUnauthorized: false, // Prevents self-signed cert issues on enterprise intranet relays
+    },
+  });
+};
+
+/**
+ * Get active transporter
+ */
+export const getTransporter = async () => {
+  const config = DEFAULT_EMAIL_CONFIG;
+  const configKey = `${config.host}-${config.port}-${config.user}-${config.pass}`;
+
+  if (!cachedTransporter || lastConfigVersion !== configKey) {
+    cachedTransporter = createTransporter(config);
+    lastConfigVersion = configKey;
+  }
+
+  return { transporter: cachedTransporter, config };
+};
+
+/**
+ * Send an email message
+ */
+export const sendEmail = async ({
+  to,
+  recipientName = '',
+  subject,
+  text,
+  html,
+  type = 'Other',
+}) => {
+  if (!to || !to.includes('@')) {
+    throw new Error(`Invalid recipient email address: "${to}".`);
+  }
+
+  const { transporter, config } = await getTransporter();
+
+  // If credentials aren't set, log email info to terminal in dev mode
+  if (!config.user || !config.pass) {
+    console.warn('[EmailService] SMTP credentials not fully configured. Email output to console:');
+    console.log(`[Email] To: ${to} | Subject: ${subject}`);
+    if (text) console.log(`[Email Body Text]:\n${text}`);
+    return { messageId: `mock-${Date.now()}` };
+  }
+
+  const fromHeader = `"${config.fromName}" <${config.fromEmail}>`;
+
+  const mailOptions = {
+    from: fromHeader,
+    to: to.trim().toLowerCase(),
+    subject,
+    text,
+    html,
+  };
+
+  if (config.replyTo) {
+    mailOptions.replyTo = config.replyTo;
+  }
+
+  const info = await transporter.sendMail(mailOptions);
+  console.log(`[EmailService] [${type}] Email sent successfully: ${info.messageId} to ${to}`);
+  return info;
+};
+
+/**
+ * Send password reset email
+ * Supports both call signatures:
+ * 1) (email, resetURL)
+ * 2) ({ toEmail, userName, resetUrl, expiresInMinutes })
+ */
+export const sendPasswordResetEmail = async (param1, param2) => {
+  let email, resetURL, userName = 'Officer / Staff Member', expiresInMinutes = 30;
+
+  if (typeof param1 === 'object' && param1 !== null) {
+    email = param1.toEmail || param1.email;
+    resetURL = param1.resetUrl || param1.resetURL;
+    userName = param1.userName || userName;
+    expiresInMinutes = param1.expiresInMinutes || expiresInMinutes;
+  } else {
+    email = param1;
+    resetURL = param2;
+  }
+
+  const subject = 'Addis Ababa Police Portal - Password Reset Request';
+  const text = `Hello ${userName},\n\nA password reset request was received for your Addis Ababa Police account.\nPlease click the link below to reset your password (valid for ${expiresInMinutes} minutes):\n${resetURL}\n\nIf you did not request this, you can ignore this email.`;
+  const html = PASSWORD_RESET_REQUEST_TEMPLATE
+    .replace('{name}', userName)
+    .replace(/\{resetURL\}/g, resetURL)
+    .replace('{expiresInMinutes}', String(expiresInMinutes));
+
+  return await sendEmail({ to: email, recipientName: userName, subject, text, html, type: 'PasswordReset' });
+};
+
+/**
+ * Send password reset confirmation email
+ */
+export const sendResetSuccessEmail = async (email, userName = 'Officer / Staff Member') => {
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const loginURL = `${clientUrl}/admin/login`;
+
+  const subject = 'Addis Ababa Police Portal - Password Reset Successful';
+  const text = `Hello ${userName},\n\nYour password for the Addis Ababa Police Portal has been successfully updated. All prior sessions have been invalidated.\n\nYou can log in now: ${loginURL}`;
+  const html = PASSWORD_RESET_SUCCESS_TEMPLATE
+    .replace('{name}', userName)
+    .replace('{loginURL}', loginURL);
+
+  return await sendEmail({ to: email, recipientName: userName, subject, text, html, type: 'PasswordResetSuccess' });
+};
+
+/**
+ * Send account invitation / setup email when an administrator creates a new account
+ * Supports:
+ * ({ email, name, role, setupUrl, expiresInHours }) or (email, setupUrl, name, role)
+ */
+export const sendAccountSetupEmail = async (param1, param2, param3, param4) => {
+  let email, setupURL, name = 'Officer / Staff Member', role = 'Portal User', expiresInHours = 24;
+
+  if (typeof param1 === 'object' && param1 !== null) {
+    email = param1.email || param1.toEmail;
+    setupURL = param1.setupUrl || param1.setupURL;
+    name = param1.name || param1.userName || name;
+    role = param1.role || role;
+    expiresInHours = param1.expiresInHours || expiresInHours;
+  } else {
+    email = param1;
+    setupURL = param2;
+    name = param3 || name;
+    role = param4 || role;
+  }
+
+  const subject = 'Addis Ababa Police Portal - Account Invitation';
+  const text = `Hello ${name},\n\nYou have been invited to join the Addis Ababa Police Portal as "${role}".\nPlease set up your secure password by opening the link below (valid for ${expiresInHours} hours):\n${setupURL}\n\nWelcome to the team!`;
+  const html = ACCOUNT_SETUP_TEMPLATE
+    .replace('{name}', name)
+    .replace('{role}', role)
+    .replace(/\{setupURL\}/g, setupURL)
+    .replace('{expiresInHours}', String(expiresInHours));
+
+  return await sendEmail({ to: email, recipientName: name, subject, text, html, type: 'AccountSetup' });
+};
+
+/**
+ * Send welcome email with default credentials (if direct password was generated)
+ */
+export const sendWelcomeEmail = async (email, fullname, password) => {
+  const defaultPass = password || 'Provided by your administrator';
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const loginURL = `${clientUrl}/admin/login`;
+
+  const subject = 'Welcome to Addis Ababa Police Portal';
+  const text = `Hello ${fullname},\n\nWelcome to the Addis Ababa Police Portal! Your account is now active.\n\nLogin credentials:\nEmail: ${email}\nInitial Password: ${defaultPass}\n\nPlease log in and update your password at: ${loginURL}`;
+  const html = WELCOME_EMAIL_TEMPLATE
+    .replace('{name}', fullname || 'User')
+    .replace('{loginURL}', loginURL);
+
+  return await sendEmail({ to: email, recipientName: fullname, subject, text, html, type: 'Welcome' });
+};

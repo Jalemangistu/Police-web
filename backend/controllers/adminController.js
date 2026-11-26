@@ -15,9 +15,11 @@ import Role from '../models/Role.js';
 import { ROLE_DEFINITIONS, AVAILABLE_ROLES } from '../config/roles.js';
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { audit } from '../middleware/auditMiddleware.js';
 import { clean } from '../utils/authUtils.js';
 import { validatePassword } from '../utils/passwordPolicy.js';
+import { sendAccountSetupEmail } from '../utils/emailService.js';
 
 export const createGenericController = (Model, pathName) => ({
   getAll: async (_, res, next) => {
@@ -147,12 +149,35 @@ export const createUser = async (req, res) => {
     return res.status(400).json({ message: 'A user with this email address already exists.' });
   }
 
+  // Generate secure invite / setup token (expires in 24 hours)
+  const rawInviteToken = crypto.randomBytes(32).toString('hex');
+  const hashedInviteToken = crypto.createHash('sha256').update(rawInviteToken).digest('hex');
+  const inviteExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
   const user = await User.create({ 
     name: name.trim(), 
     email: email.toLowerCase().trim(), 
     password: await bcrypt.hash(finalPassword, 12), 
-    role: roleKey 
+    role: roleKey,
+    resetPasswordToken: hashedInviteToken,
+    resetPasswordExpires: inviteExpires
   }); 
+
+  // Send account invite email
+  const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const setupURL = `${clientUrl}/admin/reset-password/${rawInviteToken}`;
+
+  try {
+    await sendAccountSetupEmail({
+      email: user.email,
+      name: user.name,
+      role: roleDef.name || roleKey,
+      setupUrl: setupURL,
+      expiresInHours: 24
+    });
+  } catch (emailErr) {
+    console.error('[AdminController] Error dispatching user invite email:', emailErr.message);
+  }
 
   await audit(req, 'create', 'users', user.id, { name: user.name, email: user.email, role: roleDef.name }); 
   const cleaned = clean(user);
